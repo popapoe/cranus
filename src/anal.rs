@@ -25,17 +25,17 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-pub fn analyze(
+pub fn anal(
     tree: crate::tree::Tree,
 ) -> std::result::Result<crate::graph::Graph, std::boxed::Box<dyn std::error::Error>> {
-    let mut analyzer = Analyzer::new();
+    let mut anal = Anal::new();
     for routine in tree.routines {
-        analyzer.analyze(routine)?;
+        anal.anal(routine)?;
     }
-    Ok(analyzer.into_graph()?)
+    Ok(anal.into_graph()?)
 }
 
-struct Analyzer {
+struct Anal {
     nodes: std::vec::Vec<crate::graph::Node>,
     end: usize,
     patches: std::collections::HashMap<
@@ -44,9 +44,9 @@ struct Analyzer {
     >,
 }
 
-impl Analyzer {
+impl Anal {
     fn new() -> Self {
-        Analyzer {
+        Anal {
             nodes: vec![crate::graph::Node::End],
             end: 0,
             patches: std::collections::HashMap::new(),
@@ -111,14 +111,14 @@ impl Analyzer {
             }
         }
     }
-    fn analyze(
+    fn anal(
         &mut self,
         routine: crate::tree::Routine,
     ) -> std::result::Result<(), std::boxed::Box<dyn std::error::Error>> {
         let end = self.end;
-        let mut routine_analyzer = RoutineAnalyzer::with_analyzer(self);
-        let start = routine_analyzer.analyze_statements(end, routine.body)?;
-        routine_analyzer.finish()?;
+        let mut routine_anal = RoutineAnal::with_anal(self);
+        let start = routine_anal.anal_statements(end, routine.body)?;
+        routine_anal.finish()?;
         self.patches
             .entry(routine.name.clone())
             .or_insert(Patch::new())
@@ -133,18 +133,18 @@ impl Analyzer {
     }
 }
 
-struct RoutineAnalyzer<'a> {
-    analyzer: &'a mut Analyzer,
+struct RoutineAnal<'a> {
+    anal: &'a mut Anal,
     patches: std::collections::HashMap<
         std::string::String,
         Patch<std::vec::Vec<crate::graph::Node>, usize>,
     >,
 }
 
-impl<'a> RoutineAnalyzer<'a> {
-    fn with_analyzer(analyzer: &'a mut Analyzer) -> Self {
-        RoutineAnalyzer {
-            analyzer,
+impl<'a> RoutineAnal<'a> {
+    fn with_anal(anal: &'a mut Anal) -> Self {
+        RoutineAnal {
+            anal,
             patches: std::collections::HashMap::new(),
         }
     }
@@ -156,7 +156,7 @@ impl<'a> RoutineAnalyzer<'a> {
         }
         Ok(())
     }
-    fn analyze_statements(
+    fn anal_statements(
         &mut self,
         mut last: usize,
         statements: std::vec::Vec<crate::tree::Statement>,
@@ -164,9 +164,7 @@ impl<'a> RoutineAnalyzer<'a> {
         for statement in statements.into_iter().rev() {
             match statement {
                 crate::tree::Statement::Branch { name } => {
-                    last = self
-                        .analyzer
-                        .add_node(crate::graph::Node::Branch { next: 0 });
+                    last = self.anal.add_node(crate::graph::Node::Branch { next: 0 });
                     let index = last;
                     let callback = move |nodes: &mut std::vec::Vec<crate::graph::Node>,
                                          next: &usize|
@@ -183,16 +181,16 @@ impl<'a> RoutineAnalyzer<'a> {
                     self.patches
                         .entry(name)
                         .or_insert(Patch::new())
-                        .call_back(&mut self.analyzer.nodes, std::boxed::Box::new(callback))?;
+                        .call_back(&mut self.anal.nodes, std::boxed::Box::new(callback))?;
                 }
                 crate::tree::Statement::Label { name } => self
                     .patches
                     .entry(name)
                     .or_insert(Patch::new())
-                    .patch(&mut self.analyzer.nodes, last)?,
+                    .patch(&mut self.anal.nodes, last)?,
                 crate::tree::Statement::Assign { name, value } => {
-                    self.analyzer.check_expression(&value)?;
-                    last = self.analyzer.add_node(crate::graph::Node::Assign {
+                    self.anal.check_expression(&value)?;
+                    last = self.anal.add_node(crate::graph::Node::Assign {
                         name,
                         value,
                         next: last,
@@ -200,10 +198,10 @@ impl<'a> RoutineAnalyzer<'a> {
                 }
                 crate::tree::Statement::Call { name, actuals } => {
                     for actual in actuals.iter() {
-                        self.analyzer.check_expression(actual)?;
+                        self.anal.check_expression(actual)?;
                     }
                     let actual_count = actuals.len();
-                    last = self.analyzer.add_node(crate::graph::Node::Call {
+                    last = self.anal.add_node(crate::graph::Node::Call {
                         name: name.clone(),
                         actuals,
                         next: last,
@@ -220,14 +218,14 @@ impl<'a> RoutineAnalyzer<'a> {
                         }
                         Ok(())
                     };
-                    self.analyzer
+                    self.anal
                         .patches
                         .entry(name)
                         .or_insert(Patch::new())
-                        .call_back(&mut self.analyzer.nodes, std::boxed::Box::new(callback))?;
+                        .call_back(&mut self.anal.nodes, std::boxed::Box::new(callback))?;
                 }
                 crate::tree::Statement::Receive { source, variable } => {
-                    last = self.analyzer.add_node(crate::graph::Node::Receive {
+                    last = self.anal.add_node(crate::graph::Node::Receive {
                         source,
                         variable,
                         next: last,
@@ -237,7 +235,7 @@ impl<'a> RoutineAnalyzer<'a> {
                     destination,
                     variable,
                 } => {
-                    last = self.analyzer.add_node(crate::graph::Node::Send {
+                    last = self.anal.add_node(crate::graph::Node::Send {
                         destination,
                         variable,
                         next: last,
@@ -248,9 +246,9 @@ impl<'a> RoutineAnalyzer<'a> {
                     accepted,
                     denied,
                 } => {
-                    let accepted = self.analyze_statements(last, accepted)?;
-                    let denied = self.analyze_statements(last, denied)?;
-                    last = self.analyzer.add_node(crate::graph::Node::Offer {
+                    let accepted = self.anal_statements(last, accepted)?;
+                    let denied = self.anal_statements(last, denied)?;
+                    last = self.anal.add_node(crate::graph::Node::Offer {
                         client,
                         accepted,
                         denied,
@@ -258,17 +256,17 @@ impl<'a> RoutineAnalyzer<'a> {
                 }
                 crate::tree::Statement::Accept { server } => {
                     last = self
-                        .analyzer
+                        .anal
                         .add_node(crate::graph::Node::Accept { server, next: last });
                 }
                 crate::tree::Statement::Deny { server } => {
                     last = self
-                        .analyzer
+                        .anal
                         .add_node(crate::graph::Node::Deny { server, next: last });
                 }
                 crate::tree::Statement::Close { name } => {
                     last = self
-                        .analyzer
+                        .anal
                         .add_node(crate::graph::Node::Close { name, next: last });
                 }
             }

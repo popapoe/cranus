@@ -1,4 +1,4 @@
-mod analyze;
+mod anal;
 mod graph;
 mod interpret;
 mod location;
@@ -35,7 +35,7 @@ fn run(
     });
     let scanner = crate::scan::scan(characters)?;
     let tree = crate::parse::parse(scanner)?;
-    let graph = crate::analyze::analyze(tree)?;
+    let graph = crate::anal::anal(tree)?;
     let value = crate::interpret::interpret(graph)?;
     println!("{:?}", value);
     Ok(())
