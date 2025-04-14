@@ -95,7 +95,7 @@ impl<'a> Interpreter<'a> {
         })
     }
     fn step(&mut self) -> std::result::Result<bool, std::boxed::Box<dyn std::error::Error>> {
-        match &self.graph.nodes[self.active.node] {
+        match &self.graph.nodees[self.active.node] {
             crate::graph::Node::Branch { next } => self.active.node = *next,
             crate::graph::Node::Assign {
                 name,
@@ -311,7 +311,7 @@ impl<'a> Interpreter<'a> {
                             children,
                             to_interaction,
                             ..
-                        } => match self.graph.nodes[node] {
+                        } => match self.graph.nodees[node] {
                             crate::graph::Node::Close { next, .. } => {
                                 self.active.node = next;
                                 self.active.children = children;
@@ -411,7 +411,7 @@ impl<'a> InactiveRoutine<'a> {
             InactiveRoutine::Interaction { .. } => true,
             InactiveRoutine::InteractionEnd => true,
             InactiveRoutine::Graph { node, parent, .. } => {
-                let principal = match &graph.nodes[*node] {
+                let principal = match &graph.nodees[*node] {
                     crate::graph::Node::Receive { source, .. } => source,
                     crate::graph::Node::Send { destination, .. } => destination,
                     crate::graph::Node::Offer { client, .. } => client,
@@ -448,7 +448,7 @@ impl<'a> InactiveRoutine<'a> {
                 children,
                 to_interaction,
                 ..
-            } => match &graph.nodes[*node] {
+            } => match &graph.nodees[*node] {
                 crate::graph::Node::Receive { variable, next, .. } => {
                     *node = *next;
                     if !value.is_parent_to_interaction() {
@@ -475,7 +475,7 @@ impl<'a> InactiveRoutine<'a> {
                 children,
                 parent,
                 to_interaction,
-            } => match &graph.nodes[*node] {
+            } => match &graph.nodees[*node] {
                 crate::graph::Node::Send { variable, next, .. } => {
                     *node = *next;
                     let value = if let Some(value) = children.remove(variable) {
@@ -509,7 +509,7 @@ impl<'a> InactiveRoutine<'a> {
                 Ok(())
             }
             InactiveRoutine::InteractionEnd { .. } => Err(std::boxed::Box::new(Error::TypeError)),
-            InactiveRoutine::Graph { node, .. } => match &graph.nodes[*node] {
+            InactiveRoutine::Graph { node, .. } => match &graph.nodees[*node] {
                 crate::graph::Node::Offer {
                     accepted, denied, ..
                 } => {
@@ -527,7 +527,7 @@ impl<'a> InactiveRoutine<'a> {
         match self {
             InactiveRoutine::Interaction { .. } => Err(std::boxed::Box::new(Error::TypeError)),
             InactiveRoutine::InteractionEnd { .. } => Err(std::boxed::Box::new(Error::TypeError)),
-            InactiveRoutine::Graph { node, .. } => match &graph.nodes[*node] {
+            InactiveRoutine::Graph { node, .. } => match &graph.nodees[*node] {
                 crate::graph::Node::Accept { next, .. } => {
                     *node = *next;
                     Ok(true)

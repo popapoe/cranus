@@ -36,9 +36,9 @@ pub fn anal(
 }
 
 struct Anal {
-    nodes: std::vec::Vec<crate::graph::Node>,
+    nodees: std::vec::Vec<crate::graph::Node>,
     end: usize,
-    patches: std::collections::HashMap<
+    patchs: std::collections::HashMap<
         std::string::String,
         Patch<std::vec::Vec<crate::graph::Node>, crate::graph::Routine>,
     >,
@@ -47,21 +47,21 @@ struct Anal {
 impl Anal {
     fn new() -> Self {
         Anal {
-            nodes: vec![crate::graph::Node::End],
+            nodees: vec![crate::graph::Node::End],
             end: 0,
-            patches: std::collections::HashMap::new(),
+            patchs: std::collections::HashMap::new(),
         }
     }
     fn add_node(&mut self, node: crate::graph::Node) -> usize {
-        let index = self.nodes.len();
-        self.nodes.push(node);
+        let index = self.nodees.len();
+        self.nodees.push(node);
         index
     }
     fn into_graph(
         self,
     ) -> std::result::Result<crate::graph::Graph, std::boxed::Box<dyn std::error::Error>> {
         let mut routines = std::collections::HashMap::new();
-        for (name, patch) in self.patches {
+        for (name, patch) in self.patchs {
             if let Some(routine) = patch.into_inner() {
                 routines.insert(name, routine);
             } else {
@@ -69,7 +69,7 @@ impl Anal {
             }
         }
         Ok(crate::graph::Graph {
-            nodes: self.nodes,
+            nodees: self.nodees,
             routines,
         })
     }
@@ -103,10 +103,10 @@ impl Anal {
                     }
                     Ok(())
                 };
-                self.patches
+                self.patchs
                     .entry(name.clone())
                     .or_insert(Patch::new())
-                    .call_back(&mut self.nodes, std::boxed::Box::new(callback))?;
+                    .call_back(&mut self.nodees, std::boxed::Box::new(callback))?;
                 Ok(())
             }
         }
@@ -119,11 +119,11 @@ impl Anal {
         let mut routine_anal = RoutineAnal::with_anal(self);
         let start = routine_anal.anal_statements(end, routine.body)?;
         routine_anal.finish()?;
-        self.patches
+        self.patchs
             .entry(routine.name.clone())
             .or_insert(Patch::new())
             .patch(
-                &mut self.nodes,
+                &mut self.nodees,
                 crate::graph::Routine {
                     start,
                     formals: routine.formals.clone(),
@@ -135,7 +135,7 @@ impl Anal {
 
 struct RoutineAnal<'a> {
     anal: &'a mut Anal,
-    patches: std::collections::HashMap<
+    patchs: std::collections::HashMap<
         std::string::String,
         Patch<std::vec::Vec<crate::graph::Node>, usize>,
     >,
@@ -145,11 +145,11 @@ impl<'a> RoutineAnal<'a> {
     fn with_anal(anal: &'a mut Anal) -> Self {
         RoutineAnal {
             anal,
-            patches: std::collections::HashMap::new(),
+            patchs: std::collections::HashMap::new(),
         }
     }
     fn finish(self) -> std::result::Result<(), std::boxed::Box<dyn std::error::Error>> {
-        for (name, patch) in self.patches {
+        for (name, patch) in self.patchs {
             if patch.get().is_none() {
                 return Err(std::boxed::Box::new(Error::UnknownLabel(name)));
             }
@@ -166,28 +166,28 @@ impl<'a> RoutineAnal<'a> {
                 crate::tree::Statement::Branch { name } => {
                     last = self.anal.add_node(crate::graph::Node::Branch { next: 0 });
                     let index = last;
-                    let callback = move |nodes: &mut std::vec::Vec<crate::graph::Node>,
+                    let callback = move |nodees: &mut std::vec::Vec<crate::graph::Node>,
                                          next: &usize|
                           -> std::result::Result<
                         (),
                         std::boxed::Box<dyn std::error::Error>,
                     > {
-                        match &mut nodes[index] {
+                        match &mut nodees[index] {
                             crate::graph::Node::Branch { next: pointer } => *pointer = *next,
                             _ => unreachable!(),
                         }
                         Ok(())
                     };
-                    self.patches
+                    self.patchs
                         .entry(name)
                         .or_insert(Patch::new())
-                        .call_back(&mut self.anal.nodes, std::boxed::Box::new(callback))?;
+                        .call_back(&mut self.anal.nodees, std::boxed::Box::new(callback))?;
                 }
                 crate::tree::Statement::Label { name } => self
-                    .patches
+                    .patchs
                     .entry(name)
                     .or_insert(Patch::new())
-                    .patch(&mut self.anal.nodes, last)?,
+                    .patch(&mut self.anal.nodees, last)?,
                 crate::tree::Statement::Assign { name, value } => {
                     self.anal.check_expression(&value)?;
                     last = self.anal.add_node(crate::graph::Node::Assign {
@@ -219,10 +219,10 @@ impl<'a> RoutineAnal<'a> {
                         Ok(())
                     };
                     self.anal
-                        .patches
+                        .patchs
                         .entry(name)
                         .or_insert(Patch::new())
-                        .call_back(&mut self.anal.nodes, std::boxed::Box::new(callback))?;
+                        .call_back(&mut self.anal.nodees, std::boxed::Box::new(callback))?;
                 }
                 crate::tree::Statement::Receive { source, variable } => {
                     last = self.anal.add_node(crate::graph::Node::Receive {
