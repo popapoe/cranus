@@ -1,6 +1,6 @@
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Tree {
-    pub routines: std::vec::Vec<Routine>,
+    pub routinees: std::vec::Vec<Routine>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

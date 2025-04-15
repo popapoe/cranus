@@ -5,7 +5,7 @@ pub struct Location {
 }
 
 impl Location {
-    pub fn from_indices(line: u32, column: u32) -> Self {
+    pub fn from_indexs(line: u32, column: u32) -> Self {
         Location { line, column }
     }
     pub fn next_line(&mut self) {

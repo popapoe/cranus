@@ -1,7 +1,7 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Graph {
     pub nodees: std::vec::Vec<Node>,
-    pub routines: std::collections::HashMap<std::string::String, Routine>,
+    pub routinees: std::collections::HashMap<std::string::String, Routine>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

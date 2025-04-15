@@ -97,11 +97,11 @@ impl<
     fn parse_start(
         &mut self,
     ) -> std::result::Result<crate::tree::Tree, std::boxed::Box<dyn std::error::Error>> {
-        let mut routines = vec![];
+        let mut routinees = vec![];
         while self.peek().is_some() {
-            routines.push(self.parse_routine()?);
+            routinees.push(self.parse_routine()?);
         }
-        Ok(crate::tree::Tree { routines })
+        Ok(crate::tree::Tree { routinees })
     }
     fn parse_routine(
         &mut self,

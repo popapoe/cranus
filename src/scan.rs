@@ -77,7 +77,7 @@ impl<
         Ok(Scanner {
             characters,
             lookahead,
-            location: crate::location::Location::from_indices(1, 1),
+            location: crate::location::Location::from_indexs(1, 1),
         })
     }
     fn peek(&self) -> std::option::Option<char> {

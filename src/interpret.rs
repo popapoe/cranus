@@ -73,7 +73,7 @@ impl<'a> Interpreter<'a> {
         graph: &'a crate::graph::Graph,
         state: &'a mut InteractionState,
     ) -> std::result::Result<Self, std::boxed::Box<dyn std::error::Error>> {
-        let routine = if let Some(routine) = graph.routines.get("main") {
+        let routine = if let Some(routine) = graph.routinees.get("main") {
             routine
         } else {
             return Err(std::boxed::Box::new(Error::NoMain));
@@ -116,7 +116,7 @@ impl<'a> Interpreter<'a> {
                 actuals: actual_expressions,
                 next,
             } => {
-                let routine = self.graph.routines.get(name).unwrap();
+                let routine = self.graph.routinees.get(name).unwrap();
                 let mut to_interaction = None;
                 let mut children = std::collections::HashMap::new();
                 for (formal, actual_expression) in
@@ -377,7 +377,7 @@ impl<'a> ActiveRoutine<'a> {
                 before,
                 after,
             } => {
-                let routine = graph.routines.get(name).unwrap();
+                let routine = graph.routinees.get(name).unwrap();
                 let mut children = std::collections::HashMap::new();
                 let mut to_interaction_index = before.len();
                 for (index, actual_expression) in (0..).zip(before.iter()) {

@@ -29,7 +29,7 @@ pub fn anal(
     tree: crate::tree::Tree,
 ) -> std::result::Result<crate::graph::Graph, std::boxed::Box<dyn std::error::Error>> {
     let mut anal = Anal::new();
-    for routine in tree.routines {
+    for routine in tree.routinees {
         anal.anal(routine)?;
     }
     Ok(anal.into_graph()?)
@@ -60,17 +60,17 @@ impl Anal {
     fn into_graph(
         self,
     ) -> std::result::Result<crate::graph::Graph, std::boxed::Box<dyn std::error::Error>> {
-        let mut routines = std::collections::HashMap::new();
+        let mut routinees = std::collections::HashMap::new();
         for (name, patch) in self.patchs {
             if let Some(routine) = patch.into_inner() {
-                routines.insert(name, routine);
+                routinees.insert(name, routine);
             } else {
                 return Err(std::boxed::Box::new(Error::UnknownRoutine(name)));
             }
         }
         Ok(crate::graph::Graph {
             nodees: self.nodees,
-            routines,
+            routinees,
         })
     }
     fn check_expression(
