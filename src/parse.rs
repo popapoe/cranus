@@ -97,18 +97,134 @@ impl<
     fn parse_start(
         &mut self,
     ) -> std::result::Result<crate::tree::Tree, std::boxed::Box<dyn std::error::Error>> {
+        let mut typees = vec![];
         let mut routinees = vec![];
-        while self.peek().is_some() {
-            routinees.push(self.parse_routine()?);
+        while let Some(token) = self.peek() {
+            match token.value {
+                crate::token::TokenValue::Type => typees.push(self.parse_type()?),
+                crate::token::TokenValue::Routine => routinees.push(self.parse_routine()?),
+                _ => return Err(std::boxed::Box::new(Error::UnexpectedToken(token))),
+            }
         }
-        Ok(crate::tree::Tree { routinees })
+        Ok(crate::tree::Tree { typees, routinees })
+    }
+    fn parse_type(
+        &mut self,
+    ) -> std::result::Result<crate::tree::Type, std::boxed::Box<dyn std::error::Error>> {
+        self.expect(crate::token::TokenValue::Type)?;
+        let name = self.parse_identifier()?;
+        self.expect(crate::token::TokenValue::Equals)?;
+        let value = self.parse_multiplicative()?;
+        Ok(crate::tree::Type {
+            name,
+            value: std::boxed::Box::new(value),
+        })
+    }
+    fn parse_multiplicative(
+        &mut self,
+    ) -> std::result::Result<crate::tree::TypeExpression, std::boxed::Box<dyn std::error::Error>>
+    {
+        let left = self.parse_additive()?;
+        let token = if let Some(token) = self.peek() {
+            token
+        } else {
+            return Ok(left);
+        };
+        match token.value {
+            crate::token::TokenValue::Lollipop => {
+                self.advance()?;
+                let next = self.parse_multiplicative()?;
+                Ok(crate::tree::TypeExpression::Lollipop {
+                    value: std::boxed::Box::new(left),
+                    next: std::boxed::Box::new(next),
+                })
+            }
+            crate::token::TokenValue::Times => {
+                self.advance()?;
+                let next = self.parse_multiplicative()?;
+                Ok(crate::tree::TypeExpression::Times {
+                    value: std::boxed::Box::new(left),
+                    next: std::boxed::Box::new(next),
+                })
+            }
+            _ => Ok(left),
+        }
+    }
+    fn parse_additive(
+        &mut self,
+    ) -> std::result::Result<crate::tree::TypeExpression, std::boxed::Box<dyn std::error::Error>>
+    {
+        let left = self.parse_primary()?;
+        let token = if let Some(token) = self.peek() {
+            token
+        } else {
+            return Ok(left);
+        };
+        match token.value {
+            crate::token::TokenValue::With => {
+                self.advance()?;
+                let next = self.parse_additive()?;
+                Ok(crate::tree::TypeExpression::With {
+                    accept: std::boxed::Box::new(left),
+                    deny: std::boxed::Box::new(next),
+                })
+            }
+            crate::token::TokenValue::Plus => {
+                self.advance()?;
+                let next = self.parse_additive()?;
+                Ok(crate::tree::TypeExpression::Plus {
+                    accept: std::boxed::Box::new(left),
+                    deny: std::boxed::Box::new(next),
+                })
+            }
+            _ => Ok(left),
+        }
+    }
+    fn parse_primary(
+        &mut self,
+    ) -> std::result::Result<crate::tree::TypeExpression, std::boxed::Box<dyn std::error::Error>>
+    {
+        let token = if let Some(token) = self.peek() {
+            token
+        } else {
+            return Err(std::boxed::Box::new(Error::UnexpectedEnd));
+        };
+        match token.value {
+            crate::token::TokenValue::LeftParenthesis => {
+                self.expect(crate::token::TokenValue::LeftParenthesis)?;
+                let expression = self.parse_multiplicative()?;
+                self.expect(crate::token::TokenValue::RightParenthesis)?;
+                Ok(expression)
+            }
+            crate::token::TokenValue::Identifier(name) => {
+                self.advance()?;
+                Ok(crate::tree::TypeExpression::Variable {
+                    name,
+                    is_dual: false,
+                })
+            }
+            crate::token::TokenValue::Times => {
+                self.advance()?;
+                let name = self.parse_identifier()?;
+                Ok(crate::tree::TypeExpression::Variable {
+                    name,
+                    is_dual: true,
+                })
+            }
+            crate::token::TokenValue::One => {
+                self.advance()?;
+                Ok(crate::tree::TypeExpression::One)
+            }
+            _ => return Err(std::boxed::Box::new(Error::UnexpectedToken(token))),
+        }
     }
     fn parse_routine(
         &mut self,
     ) -> std::result::Result<crate::tree::Routine, std::boxed::Box<dyn std::error::Error>> {
+        self.expect(crate::token::TokenValue::Routine)?;
         let name = self.parse_identifier()?;
         self.expect(crate::token::TokenValue::LeftParenthesis)?;
-        let mut formals = vec![self.parse_identifier()?];
+        let mut formals = vec![self.parse_formal()?];
         loop {
             let token = if let Some(token) = self.peek() {
                 token
@@ -120,7 +236,7 @@ impl<
                 crate::token::TokenValue::RightParenthesis => break,
                 _ => return Err(std::boxed::Box::new(Error::UnexpectedToken(token))),
             }
-            formals.push(self.parse_identifier()?);
+            formals.push(self.parse_formal()?);
         }
         self.expect(crate::token::TokenValue::RightParenthesis)?;
         self.expect(crate::token::TokenValue::LeftBrace)?;
@@ -142,6 +258,14 @@ impl<
             formals,
             body,
         })
+    }
+    fn parse_formal(
+        &mut self,
+    ) -> std::result::Result<crate::tree::Formal, std::boxed::Box<dyn std::error::Error>> {
+        let name = self.parse_identifier()?;
+        self.expect(crate::token::TokenValue::Colon)?;
+        let r#type = self.parse_multiplicative()?;
+        Ok(crate::tree::Formal { name, r#type })
     }
     fn parse_statement(
         &mut self,

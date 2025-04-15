@@ -29,16 +29,25 @@ pub fn anal(
     tree: crate::tree::Tree,
 ) -> std::result::Result<crate::graph::Graph, std::boxed::Box<dyn std::error::Error>> {
     let mut anal = Anal::new();
+    for r#type in tree.typees {
+        anal.anal_type(r#type)?;
+    }
     for routine in tree.routinees {
-        anal.anal(routine)?;
+        anal.anal_routine(routine)?;
     }
     Ok(anal.into_graph()?)
 }
 
 struct Anal {
+    typees: std::vec::Vec<crate::graph::TypeNode>,
     nodees: std::vec::Vec<crate::graph::Node>,
-    end: usize,
-    patchs: std::collections::HashMap<
+    type_end: usize,
+    node_end: usize,
+    type_patchs: std::collections::HashMap<
+        std::string::String,
+        Patch<std::vec::Vec<crate::graph::TypeNode>, usize>,
+    >,
+    routine_patchs: std::collections::HashMap<
         std::string::String,
         Patch<std::vec::Vec<crate::graph::Node>, crate::graph::Routine>,
     >,
@@ -47,10 +56,83 @@ struct Anal {
 impl Anal {
     fn new() -> Self {
         Anal {
+            typees: vec![crate::graph::TypeNode::One],
             nodees: vec![crate::graph::Node::End],
-            end: 0,
-            patchs: std::collections::HashMap::new(),
+            type_end: 0,
+            node_end: 0,
+            type_patchs: std::collections::HashMap::new(),
+            routine_patchs: std::collections::HashMap::new(),
         }
+    }
+    fn add_variable(&mut self, node: usize, is_dual: bool) -> usize {
+        let index = self.typees.len();
+        self.typees.push(crate::graph::TypeNode::Variable {
+            node,
+            is_dual,
+            dual: index + 1,
+        });
+        self.typees.push(crate::graph::TypeNode::Variable {
+            node,
+            is_dual: !is_dual,
+            dual: index,
+        });
+        index
+    }
+    fn add_receive(&mut self, value: usize, next: usize) -> usize {
+        let index = self.typees.len();
+        self.typees.push(crate::graph::TypeNode::Lollipop {
+            value,
+            next,
+            dual: index + 1,
+        });
+        self.typees.push(crate::graph::TypeNode::Times {
+            value,
+            next: crate::graph::get_dual(&self.typees, next),
+            dual: index,
+        });
+        index
+    }
+    fn add_send(&mut self, value: usize, next: usize) -> usize {
+        let index = self.typees.len();
+        self.typees.push(crate::graph::TypeNode::Times {
+            value,
+            next,
+            dual: index + 1,
+        });
+        self.typees.push(crate::graph::TypeNode::Lollipop {
+            value,
+            next: crate::graph::get_dual(&self.typees, next),
+            dual: index,
+        });
+        index
+    }
+    fn add_offer(&mut self, accept: usize, deny: usize) -> usize {
+        let index = self.typees.len();
+        self.typees.push(crate::graph::TypeNode::With {
+            accept,
+            deny,
+            dual: index + 1,
+        });
+        self.typees.push(crate::graph::TypeNode::Plus {
+            accept: crate::graph::get_dual(&self.typees, accept),
+            deny: crate::graph::get_dual(&self.typees, deny),
+            dual: index,
+        });
+        index
+    }
+    fn add_choose(&mut self, accept: usize, deny: usize) -> usize {
+        let index = self.typees.len();
+        self.typees.push(crate::graph::TypeNode::Plus {
+            accept,
+            deny,
+            dual: index + 1,
+        });
+        self.typees.push(crate::graph::TypeNode::With {
+            accept: crate::graph::get_dual(&self.typees, accept),
+            deny: crate::graph::get_dual(&self.typees, deny),
+            dual: index,
+        });
+        index
     }
     fn add_node(&mut self, node: crate::graph::Node) -> usize {
         let index = self.nodees.len();
@@ -61,7 +143,7 @@ impl Anal {
         self,
     ) -> std::result::Result<crate::graph::Graph, std::boxed::Box<dyn std::error::Error>> {
         let mut routinees = std::collections::HashMap::new();
-        for (name, patch) in self.patchs {
+        for (name, patch) in self.routine_patchs {
             if let Some(routine) = patch.into_inner() {
                 routinees.insert(name, routine);
             } else {
@@ -69,6 +151,7 @@ impl Anal {
             }
         }
         Ok(crate::graph::Graph {
+            typees: self.typees,
             nodees: self.nodees,
             routinees,
         })
@@ -103,7 +186,7 @@ impl Anal {
                     }
                     Ok(())
                 };
-                self.patchs
+                self.routine_patchs
                     .entry(name.clone())
                     .or_insert(Patch::new())
                     .call_back(&mut self.nodees, std::boxed::Box::new(callback))?;
@@ -111,24 +194,87 @@ impl Anal {
             }
         }
     }
-    fn anal(
+    fn anal_type(
+        &mut self,
+        r#type: crate::tree::Type,
+    ) -> std::result::Result<(), std::boxed::Box<dyn std::error::Error>> {
+        let value = self.anal_type_expression(*r#type.value)?;
+        self.type_patchs
+            .entry(r#type.name.clone())
+            .or_insert(Patch::new())
+            .patch(&mut self.typees, value)?;
+        Ok(())
+    }
+    fn anal_type_expression(
+        &mut self,
+        expression: crate::tree::TypeExpression,
+    ) -> std::result::Result<usize, std::boxed::Box<dyn std::error::Error>> {
+        match expression {
+            crate::tree::TypeExpression::Variable { name, is_dual } => {
+                let index = self.add_variable(0, is_dual);
+                let callback = move |typees: &mut std::vec::Vec<crate::graph::TypeNode>,
+                                     node: &usize|
+                      -> std::result::Result<
+                    (),
+                    std::boxed::Box<dyn std::error::Error>,
+                > {
+                    let dual = crate::graph::get_dual(&typees, index);
+                    match &mut typees[index] {
+                        crate::graph::TypeNode::Variable { node: pointer, .. } => *pointer = *node,
+                        _ => unreachable!(),
+                    }
+                    match &mut typees[dual] {
+                        crate::graph::TypeNode::Variable { node: pointer, .. } => *pointer = *node,
+                        _ => unreachable!(),
+                    }
+                    Ok(())
+                };
+                self.type_patchs
+                    .entry(name)
+                    .or_insert(Patch::new())
+                    .call_back(&mut self.typees, std::boxed::Box::new(callback))?;
+                Ok(index)
+            }
+            crate::tree::TypeExpression::Lollipop { value, next } => {
+                let value = self.anal_type_expression(*value)?;
+                let next = self.anal_type_expression(*next)?;
+                Ok(self.add_receive(value, next))
+            }
+            crate::tree::TypeExpression::Times { value, next } => {
+                let value = self.anal_type_expression(*value)?;
+                let next = self.anal_type_expression(*next)?;
+                Ok(self.add_send(value, next))
+            }
+            crate::tree::TypeExpression::With { accept, deny } => {
+                let accept = self.anal_type_expression(*accept)?;
+                let deny = self.anal_type_expression(*deny)?;
+                Ok(self.add_offer(accept, deny))
+            }
+            crate::tree::TypeExpression::Plus { accept, deny } => {
+                let accept = self.anal_type_expression(*accept)?;
+                let deny = self.anal_type_expression(*deny)?;
+                Ok(self.add_choose(accept, deny))
+            }
+            crate::tree::TypeExpression::One => Ok(self.type_end),
+        }
+    }
+    fn anal_routine(
         &mut self,
         routine: crate::tree::Routine,
     ) -> std::result::Result<(), std::boxed::Box<dyn std::error::Error>> {
-        let end = self.end;
+        let end = self.node_end;
+        let mut formals = std::vec::Vec::with_capacity(routine.formals.len());
+        for crate::tree::Formal { name, r#type } in routine.formals {
+            let r#type = self.anal_type_expression(r#type)?;
+            formals.push(crate::graph::Formal { name, r#type });
+        }
         let mut routine_anal = RoutineAnal::with_anal(self);
         let start = routine_anal.anal_statements(end, routine.body)?;
         routine_anal.finish()?;
-        self.patchs
+        self.routine_patchs
             .entry(routine.name.clone())
             .or_insert(Patch::new())
-            .patch(
-                &mut self.nodees,
-                crate::graph::Routine {
-                    start,
-                    formals: routine.formals.clone(),
-                },
-            )?;
+            .patch(&mut self.nodees, crate::graph::Routine { start, formals })?;
         Ok(())
     }
 }
@@ -219,7 +365,7 @@ impl<'a> RoutineAnal<'a> {
                         Ok(())
                     };
                     self.anal
-                        .patchs
+                        .routine_patchs
                         .entry(name)
                         .or_insert(Patch::new())
                         .call_back(&mut self.anal.nodees, std::boxed::Box::new(callback))?;

@@ -84,13 +84,13 @@ impl<'a> Interpreter<'a> {
         }
         let formal = &routine.formals[0];
         let mut children = std::collections::HashMap::new();
-        children.insert(formal.clone(), InactiveRoutine::Interaction { state });
+        children.insert(formal.name.clone(), InactiveRoutine::Interaction { state });
         Ok(Interpreter {
             graph,
             active: ActiveRoutine {
                 node,
                 children,
-                to_interaction: formal.clone(),
+                to_interaction: formal.name.clone(),
             },
         })
     }
@@ -124,9 +124,9 @@ impl<'a> Interpreter<'a> {
                 {
                     let actual = self.active.evaluate(self.graph, actual_expression)?;
                     if !actual.is_parent_to_interaction() {
-                        to_interaction = Some(formal);
+                        to_interaction = Some(formal.name.clone());
                     }
-                    children.insert(formal.clone(), actual);
+                    children.insert(formal.name.clone(), actual);
                 }
                 if let Some(to_interaction) = to_interaction {
                     self.active = ActiveRoutine {
@@ -385,20 +385,20 @@ impl<'a> ActiveRoutine<'a> {
                     if !actual.is_parent_to_interaction() {
                         to_interaction_index = index;
                     }
-                    children.insert(routine.formals[index].clone(), actual);
+                    children.insert(routine.formals[index].name.clone(), actual);
                 }
                 for (index, actual_expression) in ((before.len() + 1)..).zip(after.iter()) {
                     let actual = self.evaluate(graph, actual_expression)?;
                     if !actual.is_parent_to_interaction() {
                         to_interaction_index = index;
                     }
-                    children.insert(routine.formals[index].clone(), actual);
+                    children.insert(routine.formals[index].name.clone(), actual);
                 }
                 Ok(InactiveRoutine::Graph {
                     node: routine.start,
                     children,
-                    parent: routine.formals[before.len()].clone(),
-                    to_interaction: routine.formals[to_interaction_index].clone(),
+                    parent: routine.formals[before.len()].name.clone(),
+                    to_interaction: routine.formals[to_interaction_index].name.clone(),
                 })
             }
         }

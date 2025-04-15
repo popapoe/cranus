@@ -1,6 +1,8 @@
 lazy_static::lazy_static! {
     static ref KEYWORDS: std::collections::HashMap<&'static str, crate::token::TokenValue> = {
         let mut map = std::collections::HashMap::new();
+        map.insert("type", crate::token::TokenValue::Type);
+        map.insert("routine", crate::token::TokenValue::Routine);
         map.insert("receive", crate::token::TokenValue::Receive);
         map.insert("send", crate::token::TokenValue::Send);
         map.insert("offer", crate::token::TokenValue::Offer);
@@ -15,6 +17,7 @@ lazy_static::lazy_static! {
 #[allow(dead_code)]
 #[derive(Debug)]
 pub enum Error {
+    UnexpectedEnd,
     UnexpectedCharacter {
         character: char,
         location: crate::location::Location,
@@ -24,6 +27,9 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Error::UnexpectedEnd => {
+                write!(f, "unexpected end")?;
+            }
             Error::UnexpectedCharacter {
                 character,
                 location,
@@ -158,6 +164,39 @@ impl<
             '=' => {
                 self.advance()?;
                 crate::token::TokenValue::Equals
+            }
+            '-' => {
+                self.advance()?;
+                let character = if let Some(character) = self.peek() {
+                    character
+                } else {
+                    return Err(std::boxed::Box::new(Error::UnexpectedEnd));
+                };
+                if character == 'o' {
+                    self.advance()?;
+                    crate::token::TokenValue::Lollipop
+                } else {
+                    return Err(std::boxed::Box::new(Error::UnexpectedCharacter {
+                        character,
+                        location,
+                    }));
+                }
+            }
+            '*' => {
+                self.advance()?;
+                crate::token::TokenValue::Times
+            }
+            '&' => {
+                self.advance()?;
+                crate::token::TokenValue::With
+            }
+            '+' => {
+                self.advance()?;
+                crate::token::TokenValue::Plus
+            }
+            '1' => {
+                self.advance()?;
+                crate::token::TokenValue::One
             }
             character => {
                 if character.is_ascii_alphabetic() || character == '_' {

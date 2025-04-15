@@ -1,5 +1,6 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Graph {
+    pub typees: std::vec::Vec<TypeNode>,
     pub nodees: std::vec::Vec<Node>,
     pub routinees: std::collections::HashMap<std::string::String, Routine>,
 }
@@ -7,7 +8,43 @@ pub struct Graph {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Routine {
     pub start: usize,
-    pub formals: std::vec::Vec<std::string::String>,
+    pub formals: std::vec::Vec<Formal>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Formal {
+    pub name: std::string::String,
+    pub r#type: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum TypeNode {
+    Variable {
+        node: usize,
+        is_dual: bool,
+        dual: usize,
+    },
+    Lollipop {
+        value: usize,
+        next: usize,
+        dual: usize,
+    },
+    Times {
+        value: usize,
+        next: usize,
+        dual: usize,
+    },
+    With {
+        accept: usize,
+        deny: usize,
+        dual: usize,
+    },
+    Plus {
+        accept: usize,
+        deny: usize,
+        dual: usize,
+    },
+    One,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -56,3 +93,14 @@ pub enum Node {
 }
 
 pub type Expression = crate::tree::Expression;
+
+pub fn get_dual(typees: &[crate::graph::TypeNode], node: usize) -> usize {
+    match &typees[node] {
+        crate::graph::TypeNode::Variable { dual, .. } => *dual,
+        crate::graph::TypeNode::Lollipop { dual, .. } => *dual,
+        crate::graph::TypeNode::Times { dual, .. } => *dual,
+        crate::graph::TypeNode::With { dual, .. } => *dual,
+        crate::graph::TypeNode::Plus { dual, .. } => *dual,
+        crate::graph::TypeNode::One => node,
+    }
+}
