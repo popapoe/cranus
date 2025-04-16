@@ -50,11 +50,7 @@ fn main() -> std::process::ExitCode {
     fn inner(
         args: &[std::string::String],
     ) -> std::result::Result<(), std::boxed::Box<dyn std::error::Error>> {
-        if args.len() == 1 {
-            let stdin = std::io::stdin().lock();
-            run(stdin)?;
-            Ok(())
-        } else if args.len() == 2 {
+        if args.len() == 2 {
             let file = std::fs::File::open(&args[1]).map_err(std::boxed::Box::new)?;
             let reader = std::io::BufReader::new(file);
             run(reader)?;
