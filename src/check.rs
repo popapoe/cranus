@@ -89,7 +89,7 @@ struct Checker<'a> {
     typees:
         std::vec::Vec<std::option::Option<std::collections::HashMap<std::string::String, usize>>>,
     epsilon: Epsilon,
-    classes: std::vec::Vec<usize>,
+    classs: std::vec::Vec<usize>,
 }
 
 impl<'a> Checker<'a> {
@@ -98,11 +98,11 @@ impl<'a> Checker<'a> {
         for _ in 0..graph.nodees.len() {
             typees.push(None);
         }
-        let mut classes = std::vec::Vec::with_capacity(graph.typees.len() + 1);
+        let mut classs = std::vec::Vec::with_capacity(graph.typees.len() + 1);
         let mut left = std::vec::Vec::with_capacity(graph.typees.len() + 1);
         let mut right = std::vec::Vec::with_capacity(graph.typees.len() + 1);
         for _ in 0..=graph.typees.len() {
-            classes.push(0);
+            classs.push(0);
             left.push(std::vec::Vec::new());
             right.push(std::vec::Vec::new());
         }
@@ -217,17 +217,17 @@ impl<'a> Checker<'a> {
         }
         for (low, high) in partitions {
             for node in permutation[low..high].iter() {
-                classes[*node] = permutation[low];
+                classs[*node] = permutation[low];
             }
         }
         for index in 0..graph.typees.len() {
-            classes[index] = classes[epsilon.get(index)];
+            classs[index] = classs[epsilon.get(index)];
         }
         Checker {
             graph,
             typees,
             epsilon,
-            classes,
+            classs,
         }
     }
     fn initialize_routine(&mut self, routine: &crate::graph::Routine) {
@@ -252,7 +252,7 @@ impl<'a> Checker<'a> {
             }
             for (name, gamma_type) in gamma {
                 if let Some(delta_type) = delta.get(&name) {
-                    if self.classes[gamma_type] != self.classes[*delta_type] {
+                    if self.classs[gamma_type] != self.classs[*delta_type] {
                         return Err(std::boxed::Box::new(Error::TypeMismatch));
                     }
                 } else {
@@ -285,13 +285,13 @@ impl<'a> Checker<'a> {
                 let formals = &self.graph.routinees.get(name).unwrap().formals;
                 for (index, actual) in (0..).zip(before) {
                     let r#type = self.check_expression(gamma, actual)?;
-                    if self.classes[formals[index].r#type] != self.classes[r#type] {
+                    if self.classs[formals[index].r#type] != self.classs[r#type] {
                         return Err(std::boxed::Box::new(Error::TypeMismatch));
                     }
                 }
                 for (index, actual) in (before.len() + 1..).zip(after) {
                     let r#type = self.check_expression(gamma, actual)?;
-                    if self.classes[formals[index].r#type] != self.classes[r#type] {
+                    if self.classs[formals[index].r#type] != self.classs[r#type] {
                         return Err(std::boxed::Box::new(Error::TypeMismatch));
                     }
                 }
@@ -333,7 +333,7 @@ impl<'a> Checker<'a> {
                 let formals = &self.graph.routinees.get(name).unwrap().formals;
                 for (formal, actual) in formals.iter().zip(actuals) {
                     let r#type = self.check_expression(&mut gamma, actual)?;
-                    if self.classes[formal.r#type] != self.classes[r#type] {
+                    if self.classs[formal.r#type] != self.classs[r#type] {
                         return Err(std::boxed::Box::new(Error::TypeMismatch));
                     }
                 }
@@ -384,7 +384,7 @@ impl<'a> Checker<'a> {
                         ..
                     } => {
                         if let Some(r#type) = gamma.remove(variable) {
-                            if self.classes[r#type] != self.classes[*value] {
+                            if self.classs[r#type] != self.classs[*value] {
                                 return Err(std::boxed::Box::new(Error::TypeMismatch));
                             }
                         } else {
