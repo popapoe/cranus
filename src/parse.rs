@@ -398,6 +398,9 @@ impl<
             crate::token::TokenValue::Identifier(_) => {
                 return Ok(crate::tree::Expression::Variable { name: identifier });
             }
+            crate::token::TokenValue::RightBrace => {
+                return Ok(crate::tree::Expression::Variable { name: identifier });
+            }
             crate::token::TokenValue::LeftParenthesis => {}
             _ => return Err(std::boxed::Box::new(Error::UnexpectedToken(token))),
         }
