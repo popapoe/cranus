@@ -277,9 +277,6 @@ impl<
             return Ok(crate::tree::Statement::Branch { name: identifier });
         };
         match token.value {
-            crate::token::TokenValue::RightBrace => {
-                Ok(crate::tree::Statement::Branch { name: identifier })
-            }
             crate::token::TokenValue::Colon => {
                 self.advance()?;
                 Ok(crate::tree::Statement::Label { name: identifier })
@@ -379,7 +376,7 @@ impl<
                 self.advance()?;
                 Ok(crate::tree::Statement::Close { name: identifier })
             }
-            _ => Err(std::boxed::Box::new(Error::UnexpectedToken(token))),
+            _ => Ok(crate::tree::Statement::Branch { name: identifier }),
         }
     }
     fn parse_expression(
