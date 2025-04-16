@@ -35,11 +35,12 @@ impl std::error::Error for Error {}
 
 pub fn interpret(
     graph: crate::graph::Graph,
+    input: u32,
 ) -> std::result::Result<u32, std::boxed::Box<dyn std::error::Error>> {
-    let mut state = 0;
+    let mut state = InteractionState::Main(input, 0);
     let mut interpreter = Interpreter::create(&graph, &mut state)?;
     while interpreter.step()? {}
-    Ok(state)
+    Ok(state.get_output())
 }
 
 struct ActiveRoutine<'a> {
@@ -61,7 +62,21 @@ enum InactiveRoutine<'a> {
     },
 }
 
-type InteractionState = u32;
+enum InteractionState {
+    Main(u32, u32),
+    Input(u32, u32),
+    Output(u32, u32),
+}
+
+impl InteractionState {
+    fn get_output(&self) -> u32 {
+        match self {
+            InteractionState::Main(_, output) => *output,
+            InteractionState::Input(_, output) => *output,
+            InteractionState::Output(_, output) => *output,
+        }
+    }
+}
 
 struct Interpreter<'a> {
     graph: &'a crate::graph::Graph,
@@ -500,14 +515,25 @@ impl<'a> InactiveRoutine<'a> {
         accept: bool,
     ) -> std::result::Result<(), std::boxed::Box<dyn std::error::Error>> {
         match self {
-            InactiveRoutine::Interaction { state } => {
-                if accept {
-                    **state += 1;
-                } else {
-                    *self = InactiveRoutine::InteractionEnd;
+            InactiveRoutine::Interaction { state } => match state {
+                InteractionState::Main(input, output) => {
+                    if accept {
+                        **state = InteractionState::Input(*input, *output);
+                    } else {
+                        **state = InteractionState::Output(*input, *output);
+                    }
+                    Ok(())
                 }
-                Ok(())
-            }
+                InteractionState::Output(input, output) => {
+                    if accept {
+                        **state = InteractionState::Main(*input, *output + 1);
+                    } else {
+                        *self = InactiveRoutine::InteractionEnd;
+                    }
+                    Ok(())
+                }
+                _ => Err(std::boxed::Box::new(Error::TypeError)),
+            },
             InactiveRoutine::InteractionEnd { .. } => Err(std::boxed::Box::new(Error::TypeError)),
             InactiveRoutine::Graph { node, .. } => match &graph.nodees[*node] {
                 crate::graph::Node::Offer {
@@ -525,7 +551,18 @@ impl<'a> InactiveRoutine<'a> {
         graph: &crate::graph::Graph,
     ) -> std::result::Result<bool, std::boxed::Box<dyn std::error::Error>> {
         match self {
-            InactiveRoutine::Interaction { .. } => Err(std::boxed::Box::new(Error::TypeError)),
+            InactiveRoutine::Interaction { state } => match state {
+                InteractionState::Input(input, output) => {
+                    if *input != 0 {
+                        **state = InteractionState::Main(*input - 1, *output);
+                        Ok(true)
+                    } else {
+                        **state = InteractionState::Main(*input, *output);
+                        Ok(false)
+                    }
+                }
+                _ => Err(std::boxed::Box::new(Error::TypeError)),
+            },
             InactiveRoutine::InteractionEnd { .. } => Err(std::boxed::Box::new(Error::TypeError)),
             InactiveRoutine::Graph { node, .. } => match &graph.nodees[*node] {
                 crate::graph::Node::Accept { next, .. } => {

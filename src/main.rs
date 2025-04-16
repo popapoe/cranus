@@ -38,7 +38,10 @@ fn run(
     let tree = crate::parse::parse(scanner)?;
     let graph = crate::anal::anal(tree)?;
     crate::check::check(&graph)?;
-    let value = crate::interpret::interpret(graph)?;
+    let mut line = std::string::String::new();
+    std::io::stdin().read_line(&mut line)?;
+    let input = line.trim().parse().map_err(std::boxed::Box::new)?;
+    let value = crate::interpret::interpret(graph, input)?;
     println!("{:?}", value);
     Ok(())
 }
