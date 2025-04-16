@@ -243,7 +243,7 @@ impl<'a> Checker<'a> {
         gamma: std::collections::HashMap<std::string::String, usize>,
     ) -> std::result::Result<(), std::boxed::Box<dyn std::error::Error>> {
         if let Some(delta) = &self.typees[index] {
-            if delta.len() < gamma.len() {
+            if delta.len() > gamma.len() {
                 for name in delta.keys() {
                     if !gamma.contains_key(name) {
                         return Err(std::boxed::Box::new(Error::Closed(name.clone())));
