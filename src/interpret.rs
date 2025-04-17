@@ -457,7 +457,7 @@ impl<'a> InactiveRoutine<'a> {
     ) -> std::result::Result<(), std::boxed::Box<dyn std::error::Error>> {
         match self {
             InactiveRoutine::Interaction { .. } => Err(std::boxed::Box::new(Error::TypeError)),
-            InactiveRoutine::InteractionEnd { .. } => Err(std::boxed::Box::new(Error::TypeError)),
+            InactiveRoutine::InteractionEnd => Err(std::boxed::Box::new(Error::TypeError)),
             InactiveRoutine::Graph {
                 node,
                 children,
@@ -484,7 +484,7 @@ impl<'a> InactiveRoutine<'a> {
     ) -> std::result::Result<InactiveRoutine<'a>, std::boxed::Box<dyn std::error::Error>> {
         match self {
             InactiveRoutine::Interaction { .. } => Err(std::boxed::Box::new(Error::TypeError)),
-            InactiveRoutine::InteractionEnd { .. } => Err(std::boxed::Box::new(Error::TypeError)),
+            InactiveRoutine::InteractionEnd => Err(std::boxed::Box::new(Error::TypeError)),
             InactiveRoutine::Graph {
                 node,
                 children,
@@ -534,7 +534,7 @@ impl<'a> InactiveRoutine<'a> {
                 }
                 _ => Err(std::boxed::Box::new(Error::TypeError)),
             },
-            InactiveRoutine::InteractionEnd { .. } => Err(std::boxed::Box::new(Error::TypeError)),
+            InactiveRoutine::InteractionEnd => Err(std::boxed::Box::new(Error::TypeError)),
             InactiveRoutine::Graph { node, .. } => match &graph.nodees[*node] {
                 crate::graph::Node::Offer {
                     accepted, denied, ..
@@ -563,7 +563,7 @@ impl<'a> InactiveRoutine<'a> {
                 }
                 _ => Err(std::boxed::Box::new(Error::TypeError)),
             },
-            InactiveRoutine::InteractionEnd { .. } => Err(std::boxed::Box::new(Error::TypeError)),
+            InactiveRoutine::InteractionEnd => Err(std::boxed::Box::new(Error::TypeError)),
             InactiveRoutine::Graph { node, .. } => match &graph.nodees[*node] {
                 crate::graph::Node::Accept { next, .. } => {
                     *node = *next;
