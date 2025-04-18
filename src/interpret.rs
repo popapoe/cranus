@@ -147,7 +147,7 @@ impl<'a> Interpreter<'a> {
                     self.active = ActiveRoutine {
                         node: routine.start,
                         children,
-                        to_interaction: to_interaction.clone(),
+                        to_interaction,
                     };
                 } else {
                     self.active.node = *next;
