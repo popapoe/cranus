@@ -89,6 +89,11 @@ pub enum Node {
         name: std::string::String,
         next: usize,
     },
+    Connect {
+        left: std::string::String,
+        right: std::string::String,
+        next: usize,
+    },
     End,
 }
 

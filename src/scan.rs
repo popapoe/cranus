@@ -10,6 +10,7 @@ lazy_static::lazy_static! {
         map.insert("accept", crate::token::TokenValue::Accept);
         map.insert("deny", crate::token::TokenValue::Deny);
         map.insert("close", crate::token::TokenValue::Close);
+        map.insert("connect", crate::token::TokenValue::Connect);
         map
     };
 }

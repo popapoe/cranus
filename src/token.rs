@@ -21,6 +21,7 @@ pub enum TokenValue {
     Accept,
     Deny,
     Close,
+    Connect,
     Identifier(std::string::String),
 }
 

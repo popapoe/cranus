@@ -86,6 +86,10 @@ pub enum Statement {
     Close {
         name: std::string::String,
     },
+    Connect {
+        left: std::string::String,
+        right: std::string::String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

@@ -399,6 +399,14 @@ impl<
                 self.advance()?;
                 Ok(crate::tree::Statement::Close { name: identifier })
             }
+            crate::token::TokenValue::Connect => {
+                self.advance()?;
+                let variable = self.parse_identifier()?;
+                Ok(crate::tree::Statement::Connect {
+                    left: identifier,
+                    right: variable,
+                })
+            }
             _ => Ok(crate::tree::Statement::Branch { name: identifier }),
         }
     }

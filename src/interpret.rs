@@ -339,6 +339,55 @@ impl<'a> Interpreter<'a> {
                     self.active.flip(name);
                 }
             }
+            crate::graph::Node::Connect { left, right, next } => {
+                let left_child = if let Some(left_child) = self.active.children.remove(left) {
+                    left_child
+                } else {
+                    return Err(std::boxed::Box::new(Error::TypeError));
+                };
+                let right_child = if let Some(right_child) = self.active.children.remove(right) {
+                    right_child
+                } else {
+                    return Err(std::boxed::Box::new(Error::TypeError));
+                };
+                if self.active.to_interaction == *left {
+                    match right_child {
+                        InactiveRoutine::Graph {
+                            node,
+                            mut children,
+                            parent,
+                            to_interaction,
+                        } => {
+                            children.insert(parent, left_child);
+                            self.active = ActiveRoutine {
+                                node,
+                                children,
+                                to_interaction,
+                            };
+                        }
+                        _ => panic!(),
+                    }
+                } else if self.active.to_interaction == *right {
+                    match left_child {
+                        InactiveRoutine::Graph {
+                            node,
+                            mut children,
+                            parent,
+                            to_interaction,
+                        } => {
+                            children.insert(parent, right_child);
+                            self.active = ActiveRoutine {
+                                node,
+                                children,
+                                to_interaction,
+                            };
+                        }
+                        _ => panic!(),
+                    }
+                } else {
+                    self.active.node = *next;
+                }
+            }
             crate::graph::Node::End => return Err(std::boxed::Box::new(Error::TypeError)),
         }
         Ok(true)

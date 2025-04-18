@@ -415,6 +415,13 @@ impl<'a> RoutineAnal<'a> {
                         .anal
                         .add_node(crate::graph::Node::Close { name, next: last });
                 }
+                crate::tree::Statement::Connect { left, right } => {
+                    last = self.anal.add_node(crate::graph::Node::Connect {
+                        left,
+                        right,
+                        next: last,
+                    });
+                }
             }
         }
         Ok(last)

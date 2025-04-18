@@ -460,6 +460,26 @@ impl<'a> Checker<'a> {
                 }
                 self.set_gamma(*next, gamma)?;
             }
+            crate::graph::Node::Connect { left, right, next } => {
+                let left_type = if let Some(left_type) = gamma.remove(left) {
+                    left_type
+                } else {
+                    return Err(std::boxed::Box::new(Error::Closed(left.clone())));
+                };
+                let right_type = if let Some(right_type) = gamma.remove(right) {
+                    right_type
+                } else {
+                    return Err(std::boxed::Box::new(Error::Closed(right.clone())));
+                };
+                if self
+                    .epsilon
+                    .get(crate::graph::get_dual(&self.graph.typees, left_type))
+                    != self.epsilon.get(right_type)
+                {
+                    return Err(std::boxed::Box::new(Error::TypeMismatch));
+                }
+                self.set_gamma(*next, gamma)?;
+            }
             crate::graph::Node::End => {
                 if let Some(name) = gamma.into_keys().next() {
                     return Err(std::boxed::Box::new(Error::NotClosed(name.clone())));
