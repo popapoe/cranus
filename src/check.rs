@@ -316,7 +316,7 @@ impl<'a> Checker<'a> {
                 self.set_gamma(*next, gamma)?;
             }
             crate::graph::Node::Assign { name, value, next } => {
-                let r#type = self.check_expression(&mut gamma, &*value)?;
+                let r#type = self.check_expression(&mut gamma, value)?;
                 if gamma
                     .insert(name.clone(), self.epsilon.get(r#type))
                     .is_some()
