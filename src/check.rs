@@ -450,20 +450,15 @@ impl<'a> Checker<'a> {
                 }
             }
             crate::graph::Node::Close { name, next } => {
-                let r#type = if let Some(r#type) = gamma.get(name) {
+                let r#type = if let Some(r#type) = gamma.remove(name) {
                     r#type
                 } else {
                     return Err(std::boxed::Box::new(Error::Closed(name.clone())));
                 };
-                match &self.graph.typees[self.epsilon.get(*r#type)] {
-                    crate::graph::TypeNode::One => {
-                        if gamma.remove(name).is_none() {
-                            return Err(std::boxed::Box::new(Error::Closed(name.clone())));
-                        }
-                        self.set_gamma(*next, gamma)?;
-                    }
-                    _ => return Err(std::boxed::Box::new(Error::NotOne(name.clone()))),
+                if self.graph.typees[self.epsilon.get(r#type)] != crate::graph::TypeNode::One {
+                    return Err(std::boxed::Box::new(Error::NotOne(name.clone())));
                 }
+                self.set_gamma(*next, gamma)?;
             }
             crate::graph::Node::End => {
                 if let Some(name) = gamma.into_keys().next() {
