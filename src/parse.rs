@@ -328,22 +328,36 @@ impl<
                 })
             }
             crate::token::TokenValue::Offer => {
-                self.advance()?;
-                self.expect(crate::token::TokenValue::LeftBrace)?;
-                let mut accepted = vec![];
+                let mut accepteds = vec![];
                 loop {
+                    self.advance()?;
+                    self.expect(crate::token::TokenValue::LeftBrace)?;
+                    let mut accepted = vec![];
+                    loop {
+                        let token = if let Some(token) = self.peek() {
+                            token
+                        } else {
+                            return Err(std::boxed::Box::new(Error::UnexpectedEnd));
+                        };
+                        if token.value == crate::token::TokenValue::RightBrace {
+                            break;
+                        }
+                        accepted.push(self.parse_statement()?);
+                    }
+                    self.expect(crate::token::TokenValue::RightBrace)?;
+                    accepteds.push(accepted);
+                    self.expect(crate::token::TokenValue::Else)?;
                     let token = if let Some(token) = self.peek() {
                         token
                     } else {
                         return Err(std::boxed::Box::new(Error::UnexpectedEnd));
                     };
-                    if token.value == crate::token::TokenValue::RightBrace {
-                        break;
+                    match token.value {
+                        crate::token::TokenValue::LeftBrace => break,
+                        crate::token::TokenValue::Offer => {}
+                        _ => return Err(std::boxed::Box::new(Error::UnexpectedToken(token))),
                     }
-                    accepted.push(self.parse_statement()?);
                 }
-                self.expect(crate::token::TokenValue::RightBrace)?;
-                self.expect(crate::token::TokenValue::Else)?;
                 self.expect(crate::token::TokenValue::LeftBrace)?;
                 let mut denied = vec![];
                 loop {
@@ -358,11 +372,20 @@ impl<
                     denied.push(self.parse_statement()?);
                 }
                 self.expect(crate::token::TokenValue::RightBrace)?;
-                Ok(crate::tree::Statement::Offer {
-                    client: identifier,
-                    accepted,
+                let mut iterator = accepteds.into_iter().rev();
+                let mut offer = crate::tree::Statement::Offer {
+                    client: identifier.clone(),
+                    accepted: iterator.next().unwrap(),
                     denied,
-                })
+                };
+                for accepted in iterator {
+                    offer = crate::tree::Statement::Offer {
+                        client: identifier.clone(),
+                        accepted,
+                        denied: vec![offer],
+                    };
+                }
+                Ok(offer)
             }
             crate::token::TokenValue::Accept => {
                 self.advance()?;
