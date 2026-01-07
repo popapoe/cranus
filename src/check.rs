@@ -471,10 +471,8 @@ impl<'a> Checker<'a> {
                 } else {
                     return Err(std::boxed::Box::new(Error::Closed(right.clone())));
                 };
-                if self
-                    .epsilon
-                    .get(crate::graph::get_dual(&self.graph.typees, left_type))
-                    != self.epsilon.get(right_type)
+                if self.classs[crate::graph::get_dual(&self.graph.typees, left_type)]
+                    != self.classs[right_type]
                 {
                     return Err(std::boxed::Box::new(Error::TypeMismatch));
                 }
